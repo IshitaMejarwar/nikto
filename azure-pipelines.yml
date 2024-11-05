@@ -1,0 +1,41 @@
+stages:
+- stage: Build
+  jobs:
+    - job: BuildAndTest
+      tasks:
+        - task: NuGetCommand@2
+          inputs:
+            command: restore
+        - task: VSTest@2
+          inputs:
+            testAssemblyVer: '$(BuildConfiguration)'
+            testRunTitle: '$(BuildDefinitionName) - $(Build.BuildNumber)'
+
+- stage: Static Analysis
+  dependsOn: Build
+  jobs:
+    - job: SonarQubeAnalysis
+      tasks:
+        - task: SonarQubeAnalyze@1
+          inputs:
+            SonarQube: 'SonarQubeServerEndpoint'
+
+- stage: Dynamic Analysis
+  dependsOn: Static Analysis
+  jobs:
+    - job: OWASPZAPScan
+      tasks:
+        - task: PowerShell@2
+          inputs:
+            targetType: 'inline'
+            script: |
+              # Script to run OWASP ZAP scan
+
+- stage: InfrastructureAsCodeScan
+  dependsOn: Dynamic Analysis
+  jobs:
+    - job: CheckmarxScan
+      tasks:
+        - task: CheckmarxScan@1
+          inputs:
+            CheckmarxServerUrl: 'https://your-checkmarx-server'
